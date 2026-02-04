@@ -1,5 +1,21 @@
 const { chromium } = require('playwright');
 const admin = require('firebase-admin');
+const http = require('http'); // <--- NUEVO: Necesario para crear el servidor
+
+// ==============================================================================
+// 🟢 TRUCO PARA RENDER: Servidor web "falso" para mantener el despliegue vivo
+// ==============================================================================
+const port = process.env.PORT || 3000;
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Robot Multiasistencia funcionando correctamente');
+});
+
+server.listen(port, () => {
+  console.log(`🌍 Servidor web escuchando en puerto ${port} (Requisito de Render)`);
+});
+// ==============================================================================
+
 
 if (!admin.apps.length) {
   if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
@@ -189,46 +205,4 @@ async function runMultiasistencia() {
               serviceNumber: ref,
               status: "pendiente_validacion",
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            }, { merge: true });
-
-            console.log(`➕ Guardado/merge: ${ref} (${scrapData.clientName})`);
-          } else {
-            console.log(`⏭️ Saltado (sin clientName): ${ref}`);
-          }
-
-        } catch (e) {
-          console.error(`❌ Error en expediente ${ref}:`, e.message);
-          // seguimos con el siguiente, no rompemos el ciclo
-        }
-      }
-
-      // siguiente página
-      await page.goto(`${LIST_URL}&paginasiguiente=${paginaActual}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-
-      const btn = await page.$('input[value*="Siguiente"]');
-      if (btn) {
-        paginaActual++;
-        await btn.click();
-        await page.waitForTimeout(3000);
-      } else {
-        tieneSiguiente = false;
-      }
-    }
-
-    console.log("✅ Ciclo terminado.");
-
-  } catch (e) {
-    console.error("❌ Error:", e.message);
-  } finally {
-    await browser.close();
-  }
-}
-
-async function start() {
-  while (true) {
-    await runMultiasistencia();
-    await new Promise(r => setTimeout(r, 15 * 60 * 1000)); // 15 min
-  }
-}
-
-start();
+            }, { merge: true
